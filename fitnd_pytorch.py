@@ -21,24 +21,24 @@ from matplotlib import cm
 import platform
 import shutil 
 
-Leftp=0.18
-Bottomp=0.18
-Widthp=0.88-Leftp
-Heightp=0.9-Bottomp
-pos=[Leftp,Bottomp,Widthp,Heightp]
+Leftp = 0.18
+Bottomp = 0.18
+Widthp = 0.88 - Leftp
+Heightp = 0.9 - Bottomp
+pos = [Leftp, Bottomp, Widthp, Heightp]
 
-def mkdir(fn):
+def mkdir(fn):#Create a directory
     if not os.path.isdir(fn):
         os.mkdir(fn)
-def save_fig(pltm, fntmp,fp=0,ax=0,isax=0,iseps=0,isShowPic=0):
+def save_fig(pltm, fntmp,fp=0,ax=0,isax=0,iseps=0,isShowPic=0):#Save the figure
     if isax==1:
         pltm.rc('xtick',labelsize=18)
         pltm.rc('ytick',labelsize=18)
         ax.set_position(pos, which='both')
-    fnm='%s.png'%(fntmp)
+    fnm = '%s.png'%(fntmp)
     pltm.savefig(fnm)
     if iseps:
-        fnm='%s.eps'%(fntmp)
+        fnm = '%s.eps'%(fntmp)
         pltm.savefig(fnm, format='eps', dpi=600)
     if fp!=0:
         fp.savefig("%s.pdf"%(fntmp), bbox_inches='tight')
@@ -49,30 +49,30 @@ def save_fig(pltm, fntmp,fp=0,ax=0,isax=0,iseps=0,isShowPic=0):
     else:
         pltm.close()
 
-def weights_init(m):
+def weights_init(m):#Initialization weight
     if isinstance(m, nn.Linear):
         m.weight.data.normal_(0, R_variable['astddev'])
         m.bias.data.normal_(0, R_variable['bstddev'])
-class Act_op(nn.Module):
+class Act_op(nn.Module):#Custom activation function
     def __init__(self):
         super(Act_op, self).__init__()
     def forward(self, x):
         return x ** 50
-class Network(nn.Module):
+class Network(nn.Module):#DNN 0: ReLU; 1: Tanh; 2:Sin; 3:x**50; 4:Sigmoid
     def __init__(self):
         super(Network, self).__init__()
         self.block = nn.Sequential()
         for i in range(len(R_variable['full_net'])-2):
             self.block.add_module('linear'+str(i), nn.Linear(R_variable['full_net'][i],R_variable['full_net'][i+1]))
-            if R_variable['ActFuc']==1:
-                self.block.add_module('tanh'+str(i), nn.Tanh())
-            elif R_variable['ActFuc']==3:
-                self.block.add_module('sin'+str(i), nn.sin())
-            elif R_variable['ActFuc']==0:
+            if R_variable['ActFuc']==0:
                 self.block.add_module('relu'+str(i), nn.ReLU())
-            elif R_variable['ActFuc']==4:
+            elif R_variable['ActFuc']==1:
+                self.block.add_module('tanh'+str(i), nn.Tanh())
+            elif R_variable['ActFuc']==2:
+                self.block.add_module('sin'+str(i), nn.sin())
+            elif R_variable['ActFuc']==3:
                 self.block.add_module('**50'+str(i), Act_op())
-            elif R_variable['ActFuc']==5:
+            elif R_variable['ActFuc']==4:
                 self.block.add_module('sigmoid'+str(i), nn.sigmoid())
         i = len(R_variable['full_net'])-2
         self.block.add_module('linear'+str(i), nn.Linear(R_variable['full_net'][i],R_variable['full_net'][i+1]))
@@ -83,17 +83,17 @@ class Network(nn.Module):
 class Model():
     def __init__(self):
 
-        y_train = net_(torch.FloatTensor(train_inputs))
-        loss_train = float(criterion(y_train, torch.FloatTensor(R_variable['y_true_train'])))
-        y_test = net_(torch.FloatTensor(test_inputs))
-        loss_test = float(criterion(y_test, torch.FloatTensor(R_variable['y_true_test'])))
+        y_train = net_(torch.FloatTensor(train_inputs).to(device))
+        loss_train = float(criterion(y_train, torch.FloatTensor(R_variable['y_true_train'])).cpu())
+        y_test = net_(torch.FloatTensor(test_inputs).to(device))
+        loss_test = float(criterion(y_test, torch.FloatTensor(R_variable['y_true_test'])).cpu())
 
-        nametmp='%smodel/'%(FolderName)
+        nametmp = '%smodel/'%(FolderName)
         mkdir(nametmp)
         torch.save(net_.state_dict(),"%smodel.ckpt"%(nametmp))
 
-        R_variable['y_train'] = y_train.detach().numpy()
-        R_variable['y_test'] = y_test.detach().numpy()
+        R_variable['y_train'] = y_train.cpu().detach().numpy()
+        R_variable['y_test'] = y_test.cpu().detach().numpy()
         R_variable['loss_train'] = [loss_train]
         R_variable['loss_test'] = [loss_test]
         R_variable['max_gap_train'] = [np.max(np.abs(R_variable['y_train']-R_variable['y_true_train']))]
@@ -103,13 +103,13 @@ class Model():
 
     def run_onestep(self):
 
-        y_test = net_(torch.FloatTensor(test_inputs))
-        loss_test = float(criterion(y_test, torch.FloatTensor(R_variable['y_true_test'])))
-        y_train = net_(torch.FloatTensor(train_inputs))
-        loss_train = float(criterion(y_train, torch.FloatTensor(R_variable['y_true_train'])))
+        y_test = net_(torch.FloatTensor(test_inputs).to(device))
+        loss_test = float(criterion(y_test, torch.FloatTensor(R_variable['y_true_test']).to(device)).cpu())
+        y_train = net_(torch.FloatTensor(train_inputs).to(device))
+        loss_train = float(criterion(y_train, torch.FloatTensor(R_variable['y_true_train']).to(device)).cpu())
 
-        R_variable['y_train'] = y_train.detach().numpy()
-        R_variable['y_test'] = y_test.detach().numpy()
+        R_variable['y_train'] = y_train.cpu().detach().numpy()
+        R_variable['y_test'] = y_test.cpu().detach().numpy()
         R_variable['loss_test'].append(loss_test)
         R_variable['loss_train'].append(loss_train)
         R_variable['max_gap_train'].append(np.max(np.abs(R_variable['y_train']-R_variable['y_true_train'])))
@@ -122,18 +122,18 @@ class Model():
         for i in range(R_variable['train_size']//R_variable['batch_size']+1):
 
             mask = np.random.choice(R_variable['train_size'], R_variable['batch_size'], replace=False)
-            y_train = net_(torch.FloatTensor(train_inputs[mask]))
-            loss = criterion(y_train, torch.FloatTensor(R_variable['y_true_train'][mask]))
+            y_train = net_(torch.FloatTensor(train_inputs[mask]).to(device))
+            loss = criterion(y_train, torch.FloatTensor(R_variable['y_true_train'][mask]).to(device))
             
             optimizer.zero_grad() 
             loss.backward()   
             optimizer.step() 
 
-        R_variable['learning_rate']=R_variable['learning_rate']*(1-R_variable['learning_rateDecay'])
+        R_variable['learning_rate'] = R_variable['learning_rate'] * (1-R_variable['learning_rateDecay'])
 
     def run(self, step_n=1):
 
-        nametmp='%smodel/model.ckpt'%(FolderName)
+        nametmp = '%smodel/model.ckpt'%(FolderName)
         net_.load_state_dict(torch.load(nametmp))
         net_.eval()
 
@@ -142,9 +142,10 @@ class Model():
             self.run_onestep()
 
             if epoch%plot_epoch==0:
-                print('time elapse: %.3f'%(time.time()-t0))
-                print('model, epoch: %d, train loss: %f' % (epoch,R_variable['loss_train'][-1]))
-                print('model, epoch: %d, test loss: %f' % (epoch,R_variable['loss_test'][-1]))
+
+                print('time elapse: %.3f' %(time.time()-t0))
+                print('model, epoch: %d, train loss: %f' %(epoch,R_variable['loss_train'][-1]))
+                print('model, epoch: %d, test loss: %f' %(epoch,R_variable['loss_test'][-1]))
                 print('max gap of train inputs: %f' %(R_variable['max_gap_train'][-1]))
                 print('max gap of test inputs: %f' %(R_variable['max_gap_train'][-1]))
                 print('mean gap of train inputs: %f' %(R_variable['mean_gap_train'][-1]))
@@ -155,10 +156,10 @@ class Model():
                 self.plot_gap()
                 self.save_file()
 
-                nametmp='%smodel/'%(FolderName)
+                nametmp = '%smodel/'%(FolderName)
                 shutil.rmtree(nametmp)
                 mkdir(nametmp)
-                torch.save(net_.state_dict(),"%smodel.ckpt"%(nametmp))
+                torch.save(net_.state_dict(), "%smodel.ckpt"%(nametmp))
 
     def plot_loss(self):
         
@@ -197,11 +198,13 @@ class Model():
     def plot_y(self,name=''):
         
         if R_variable['input_dim']==2:
+
             X = np.arange(R_variable['x_start'], R_variable['x_end'], 0.1)
             Y = np.arange(R_variable['x_start'], R_variable['x_end'], 0.1)
             X, Y = np.meshgrid(X, Y)
             xy=np.concatenate((np.reshape(X,[-1,1]),np.reshape(Y,[-1,1])),axis=1)
             Z = np.reshape(get_y(xy),[len(X),-1])
+
             fp = plt.figure()
             ax = fp.gca(projection='3d')
             surf = ax.plot_surface(X, Y, Z-np.min(Z), cmap=cm.coolwarm,linewidth=0, antialiased=False)
@@ -213,6 +216,7 @@ class Model():
             save_fig(plt,fntmp,ax=ax,isax=1,iseps=0)
 
         if R_variable['input_dim']==1:
+
             plt.figure()
             ax = plt.gca()
             y1 = R_variable['y_test']
@@ -236,19 +240,20 @@ class Model():
         
         text_file.close()
 
+#All parameters
 R_variable={}
 
 R_variable['input_dim'] = 2
 R_variable['output_dim'] = 1
-R_variable['ActFuc'] = 1  ###  0: ReLU; 1: Tanh; 3:sin;4: x**5,, 5: sigmoid  6 sigmoid derivate
+R_variable['ActFuc'] = 1  # 0: ReLU; 1: Tanh; 2:Sin; 3:x**50; 4:Sigmoid
 R_variable['hidden_units'] = [200,200,200]
 R_variable['full_net'] = [R_variable['input_dim']] + R_variable['hidden_units'] + [R_variable['output_dim']]
 
 R_variable['learning_rate'] = 1e-6
 R_variable['learning_rateDecay'] = 2e-7
 
-R_variable['astddev'] = np.sqrt(1/20)
-R_variable['bstddev'] = np.sqrt(1/20)
+R_variable['astddev'] = np.sqrt(1/20)# For weight
+R_variable['bstddev'] = np.sqrt(1/20)# For bias
 
 plot_epoch = 500
 R_variable['train_size'] = 1000; 
@@ -258,44 +263,50 @@ R_variable['x_start'] = -np.pi/2
 R_variable['x_end'] = np.pi/2
 
 if R_variable['input_dim']==1:
-    R_variable['test_inputs'] =np.reshape(np.linspace(R_variable['x_start'], R_variable['x_end'], num=R_variable['test_size'],
+    R_variable['test_inputs'] = np.reshape(np.linspace(R_variable['x_start'], R_variable['x_end'], num=R_variable['test_size'],
                                                       endpoint=True),[R_variable['test_size'],1])
-    R_variable['train_inputs']=np.reshape(np.linspace(R_variable['x_start'], R_variable['x_end'], num=R_variable['train_size'],
+    R_variable['train_inputs'] = np.reshape(np.linspace(R_variable['x_start'], R_variable['x_end'], num=R_variable['train_size'],
                                                       endpoint=True),[R_variable['train_size'],1])
 else:
-    R_variable['test_inputs']=np.random.rand(R_variable['test_size'],R_variable['input_dim'])*(R_variable['x_end']-R_variable['x_start'])+R_variable['x_start']
-    R_variable['train_inputs']=np.random.rand(R_variable['train_size'],R_variable['input_dim'])*(R_variable['x_end']-R_variable['x_start'])+R_variable['x_start']
+    R_variable['test_inputs'] = np.random.rand(R_variable['test_size'],R_variable['input_dim'])*(R_variable['x_end']-R_variable['x_start'])+R_variable['x_start']
+    R_variable['train_inputs'] = np.random.rand(R_variable['train_size'],R_variable['input_dim'])*(R_variable['x_end']-R_variable['x_start'])+R_variable['x_start']
 
-def get_y(xs):
-    tmp=0
+def get_y(xs):#Function to fit
+    tmp = 0
     for ii in range(R_variable['input_dim']):
-        tmp+=np.cos(4*xs[:,ii:ii+1]) 
+        tmp += np.cos(4*xs[:,ii:ii+1]) 
     return tmp
 
-test_inputs=R_variable['test_inputs']
-train_inputs=R_variable['train_inputs']
-R_variable['y_true_test']= get_y(test_inputs)
-R_variable['y_true_train']=get_y(train_inputs)
+test_inputs = R_variable['test_inputs']
+train_inputs = R_variable['train_inputs']
+R_variable['y_true_test'] = get_y(test_inputs)
+R_variable['y_true_train'] = get_y(train_inputs)
 
-BaseDir = 'Syrah/'
+# make a folder to save all output
+BaseDir = 'tkj/'
 subFolderName = '%s'%(int(np.absolute(np.random.normal([1])*100000))//int(1)) 
 FolderName = '%s%s/'%(BaseDir,subFolderName)
 mkdir(BaseDir)
 mkdir(FolderName)
 mkdir('%smodel/'%(FolderName))
+print(subFolderName)
 
 if  not platform.system()=='Windows':
     shutil.copy(__file__,'%s%s'%(FolderName,os.path.basename(__file__)))
 
-t0=time.time()
-net_ = Network()
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+print(device)
+
+t0 = time.time()
+net_ = Network().to(device)
 net_.apply(weights_init)
 print(net_)
-criterion = nn.MSELoss(reduction='mean')
+
+criterion = nn.MSELoss(reduction='mean').to(device)
 optimizer = torch.optim.Adam(net_.parameters(), lr=R_variable['learning_rate'])
 
 model = Model()
-model.run(6000)
+model.run(10000)
 
 
 
