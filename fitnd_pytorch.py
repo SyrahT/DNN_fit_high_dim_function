@@ -27,10 +27,10 @@ Widthp = 0.88 - Leftp
 Heightp = 0.9 - Bottomp
 pos = [Leftp, Bottomp, Widthp, Heightp]
 
-def mkdir(fn):#Create a directory
+def mkdir(fn):# Create a directory
     if not os.path.isdir(fn):
         os.mkdir(fn)
-def save_fig(pltm, fntmp,fp=0,ax=0,isax=0,iseps=0,isShowPic=0):#Save the figure
+def save_fig(pltm, fntmp,fp=0,ax=0,isax=0,iseps=0,isShowPic=0):# Save the figure
     if isax==1:
         pltm.rc('xtick',labelsize=18)
         pltm.rc('ytick',labelsize=18)
@@ -49,16 +49,16 @@ def save_fig(pltm, fntmp,fp=0,ax=0,isax=0,iseps=0,isShowPic=0):#Save the figure
     else:
         pltm.close()
 
-def weights_init(m):#Initialization weight
+def weights_init(m):# Initialization weight
     if isinstance(m, nn.Linear):
         m.weight.data.normal_(0, R_variable['astddev'])
         m.bias.data.normal_(0, R_variable['bstddev'])
-class Act_op(nn.Module):#Custom activation function
+class Act_op(nn.Module):# Custom activation function
     def __init__(self):
         super(Act_op, self).__init__()
     def forward(self, x):
-        return x ** 50
-class Network(nn.Module):#DNN 0: ReLU; 1: Tanh; 2:Sin; 3:x**50; 4:Sigmoid
+        return x ** 50# or F.relu(x) * F.relu(1-x)
+class Network(nn.Module):# DNN 0: ReLU; 1: Tanh; 2:Sin; 3:x**50; 4:Sigmoid
     def __init__(self):
         super(Network, self).__init__()
         self.block = nn.Sequential()
@@ -119,7 +119,7 @@ class Model():
 
         optimizer = torch.optim.Adam(net_.parameters(), lr=R_variable['learning_rate'])
 
-        for i in range(R_variable['train_size']//R_variable['batch_size']+1):
+        for i in range(R_variable['train_size']//R_variable['batch_size']+1):#bootstrap
 
             mask = np.random.choice(R_variable['train_size'], R_variable['batch_size'], replace=False)
             y_train = net_(torch.FloatTensor(train_inputs[mask]).to(device))
@@ -133,6 +133,7 @@ class Model():
 
     def run(self, step_n=1):
 
+        # Load paremeters
         nametmp = '%smodel/model.ckpt'%(FolderName)
         net_.load_state_dict(torch.load(nametmp))
         net_.eval()
@@ -156,6 +157,7 @@ class Model():
                 self.plot_gap()
                 self.save_file()
 
+                # Save parameters
                 nametmp = '%smodel/'%(FolderName)
                 shutil.rmtree(nametmp)
                 mkdir(nametmp)
@@ -240,7 +242,7 @@ class Model():
         
         text_file.close()
 
-#All parameters
+# All parameters
 R_variable={}
 
 R_variable['input_dim'] = 2
@@ -271,7 +273,7 @@ else:
     R_variable['test_inputs'] = np.random.rand(R_variable['test_size'],R_variable['input_dim'])*(R_variable['x_end']-R_variable['x_start'])+R_variable['x_start']
     R_variable['train_inputs'] = np.random.rand(R_variable['train_size'],R_variable['input_dim'])*(R_variable['x_end']-R_variable['x_start'])+R_variable['x_start']
 
-def get_y(xs):#Function to fit
+def get_y(xs):# Function to fit
     tmp = 0
     for ii in range(R_variable['input_dim']):
         tmp += np.cos(4*xs[:,ii:ii+1]) 
@@ -282,8 +284,8 @@ train_inputs = R_variable['train_inputs']
 R_variable['y_true_test'] = get_y(test_inputs)
 R_variable['y_true_train'] = get_y(train_inputs)
 
-# make a folder to save all output
-BaseDir = 'tkj/'
+# Make a folder to save all output
+BaseDir = 'fitnd/'
 subFolderName = '%s'%(int(np.absolute(np.random.normal([1])*100000))//int(1)) 
 FolderName = '%s%s/'%(BaseDir,subFolderName)
 mkdir(BaseDir)
@@ -291,7 +293,7 @@ mkdir(FolderName)
 mkdir('%smodel/'%(FolderName))
 print(subFolderName)
 
-if  not platform.system()=='Windows':
+if not platform.system()=='Windows':
     shutil.copy(__file__,'%s%s'%(FolderName,os.path.basename(__file__)))
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
