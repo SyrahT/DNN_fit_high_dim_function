@@ -1,4 +1,4 @@
-# DNN_fit_high_dim_function
+# DNN fit high dim function
 code using tensorflow/pytorch to fit high dimensional function
 
 # DNN solves PDEs
